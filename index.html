@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>专属手机</title>
+    <style>
+        :root {
+            --phone-width: 375px;
+            --phone-height: 720px;
+            --safe-bottom: 20px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #0f0f1a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        .phone-frame {
+            width: var(--phone-width);
+            height: var(--phone-height);
+            background: #1c1c1e;
+            border-radius: 36px;
+            padding: 10px;
+            box-shadow: 0 0 0 3px #2a2a2d, 0 0 0 8px #333, 0 20px 60px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 26px;
+            overflow: hidden;
+            position: relative;
+        }
+        /* 锁屏 */
+        #lockScreen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(180deg, #0a0a1a, #1a1040, #0d1b2a, #1b2838);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 26px;
+            cursor: pointer;
+            transition: transform 0.4s ease;
+        }
+        .lock-time {
+            font-size: 64px;
+            font-weight: 200;
+            color: #fff;
+            letter-spacing: 4px;
+            text-shadow: 0 0 40px rgba(255,255,255,0.3);
+        }
+        .lock-date {
+            font-size: 16px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 6px;
+        }
+        .lock-hint {
+            position: absolute;
+            bottom: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            animation: bounce 2s infinite;
+        }
+        .lock-hint .arrow {
+            font-size: 28px;
+            color: rgba(255,255,255,0.7);
+        }
+        .lock-hint span {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+        }
+        @keyframes bounce {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+        /* 密码界面 */
+        #passScreen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #1c1c1e;
+            z-index: 190;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            border-radius: 26px;
+            padding-top: 60px;
+        }
+        .pw-title {
+            color: #fff;
+            font-size: 20px;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+        .pw-subtitle {
+            color: rgba(255,255,255,0.5);
+            font-size: 13px;
+            margin-bottom: 30px;
+        }
+        .pw-dots {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+        .pw-dot {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.5);
+            transition: all 0.2s;
+        }
+        .pw-dot.filled {
+            background: #fff;
+            border-color: #fff;
+            box-shadow: 0 0 12px rgba(255,255,255,0.5);
+        }
+        .pw-dot.error {
+            border-color: #ff4d6a;
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-5px); }
+        }
+        .pw-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            gap: 8px;
+        }
+        .pw-key {
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            border: none;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .pw-key:active {
+            background: rgba(255,255,255,0.25);
+            transform: scale(0.92);
+        }
+        /* 桌面 */
+        #desktop {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, #f2f2f7, #e8ecf1);
+            z-index: 150;
+            display: none;
+            flex-direction: column;
+            border-radius: 26px;
+        }
+        .status-bar {
+            height: 24px;
+            background: rgba(0,0,0,0.02);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 11px;
+            color: #333;
+        }
+        .app-grid {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px 8px;
+            flex: 1;
+            align-content: start;
+        }
+        .app-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .app-item:active { transform: scale(0.88); }
+        .app-icon {
+            width: 56px; height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .app-name {
+            font-size: 11px;
+            color: #333;
+        }
+        .dock {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(20px);
+            margin: 0 12px 16px;
+            border-radius: 24px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .dock-icon {
+            width: 42px; height: 42px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+        }
+        /* 应用层 */
+        .app-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #f5f5f7;
+            z-index: 160;
+            display: none;
+            flex-direction: column;
+            border-radius: 26px;
+            overflow: hidden;
+        }
+        .app-header {
+            height: 44px;
+            background: #f8f8f8;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            border-bottom: 1px solid #e5e5e5;
+            gap: 10px;
+        }
+        .back-btn {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.05);
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .header-title {
+            font-size: 17px;
+            font-weight: 600;
+            flex: 1;
+            text-align: center;
+            color: #1a1a1a;
+        }
+        .app-body {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        /* 微信 */
+        .wechat-tabs {
+            display: flex;
+            height: 50px;
+            background: #f7f7f7;
+            border-top: 1px solid #e0e0e0;
+        }
+        .wechat-tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 10px;
+            color: #999;
+        }
+        .wechat-tab.active {
+            color: #07c160;
+            font-weight: 600;
+        }
+        .chat-list-item, .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            background: #fff;
+        }
+        .chat-avatar {
+            width: 46px; height: 46px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .chat-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .chat-preview {
+            font-size: 13px;
+            color: #999;
+            margin-top: 2px;
+        }
+        .chat-detail {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 10px 14px;
+            overflow-y: auto;
+            background: #ededed;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .msg-bubble {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+        .msg-bubble.self {
+            align-self: flex-end;
+            background: #95ec69;
+        }
+        .msg-bubble.other {
+            align-self: flex-start;
+            background: #fff;
+        }
+        .chat-input-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #f7f7f7;
+            border-top: 1px solid #e0e0e0;
+        }
+        .chat-input-bar input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            outline: none;
+        }
+        .send-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: #07c160;
+            color: #fff;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        /* 朋友圈 */
+        .moment-item {
+            background: #fff;
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+        }
+        .moment-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .moment-avatar {
+            width: 38px; height: 38px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+        }
+        .moment-name {
+            font-weight: 600;
+            color: #576b95;
+            font-size: 14px;
+        }
+        .moment-content {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+        }
+        .moment-time {
+            font-size: 11px;
+            color: #bbb;
+            margin-top: 6px;
+        }
+        .moment-likes {
+            font-size: 12px;
+            color: #576b95;
+            margin-top: 4px;
+            background: #f5f5f7;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        /* 抖音 */
+        .tt-card {
+            height: 100%;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 20px;
+            background-size: cover;
+            position: relative;
+            min-height: 420px;
+            background: linear-gradient(180deg, #1a1a2e, #0d1b2a, #000);
+        }
+        .tt-heart {
+            position: absolute;
+            right: 16px;
+            bottom: 80px;
+            font-size: 36px;
+            cursor: pointer;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255,77,106,0.6);
+        }
+        /* toast */
+        .toast {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 300;
+            pointer-events: none;
+            animation: fadeInOut 2s forwards;
+        }
+        @keyframes fadeInOut {
+            0% { opacity:0; transform: translate(-50%,-50%) scale(0.8); }
+            15% { opacity:1; }
+            75% { opacity:1; }
+            100% { opacity:0; }
+        }
+    </style>
+</head>
+<body>
+<div class="phone-frame">
+    <div class="phone-screen" id="phoneScreen">
+        <!-- 锁屏 -->
+        <div id="lockScreen">
+            <div class="lock-time" id="lockTime">12:38</div>
+            <div class="lock-date" id="lockDate">2月14日 星期五</div>
+            <div class="lock-hint"><span class="arrow">⇧</span><span>上滑解锁</span></div>
+        </div>
+        <!-- 密码 -->
+        <div id="passScreen">
+            <div class="pw-title">输入密码</div>
+            <div class="pw-subtitle">专属手机·请输入解锁密码</div>
+            <div class="pw-dots" id="pwDots">
+                <div class="pw-dot"></div><div class="pw-dot"></div><div class="pw-dot"></div><div class="pw-dot"></div>
+            </div>
+            <div class="pw-keypad" id="pwKeypad">
+                <button class="pw-key" data-key="1">1</button>
+                <button class="pw-key" data-key="2">2</button>
+                <button class="pw-key" data-key="3">3</button>
+                <button class="pw-key" data-key="4">4</button>
+                <button class="pw-key" data-key="5">5</button>
+                <button class="pw-key" data-key="6">6</button>
+                <button class="pw-key" data-key="7">7</button>
+                <button class="pw-key" data-key="8">8</button>
+                <button class="pw-key" data-key="9">9</button>
+                <button class="pw-key" style="background:transparent;pointer-events:none"></button>
+                <button class="pw-key" data-key="0">0</button>
+                <button class="pw-key" data-key="delete" style="font-size:14px">⌫</button>
+            </div>
+        </div>
+        <!-- 桌面 -->
+        <div id="desktop">
+            <div class="status-bar"><span id="deskTime">12:38</span><span>📶 WiFi 🔋</span></div>
+            <div class="app-grid">
+                <div class="app-item" data-app="wechat"><div class="app-icon" style="background:#07c160;color:#fff">💬</div><span class="app-name">微信</span></div>
+                <div class="app-item" data-app="phone"><div class="app-icon" style="background:#34c759;color:#fff">📞</div><span class="app-name">电话</span></div>
+                <div class="app-item" data-app="messages"><div class="app-icon" style="background:#007aff;color:#fff">✉️</div><span class="app-name">信息</span></div>
+                <div class="app-item" data-app="tiktok"><div class="app-icon" style="background:#000;color:#fff">🎵</div><span class="app-name">抖音</span></div>
+                <div class="app-item" data-app="notes"><div class="app-icon" style="background:#ffcc00;color:#fff">📝</div><span class="app-name">便签</span></div>
+                <div class="app-item" data-app="camera"><div class="app-icon" style="background:#5856d6;color:#fff">📷</div><span class="app-name">相机</span></div>
+                <div class="app-item" data-app="photos"><div class="app-icon" style="background:#ff9500;color:#fff">🖼️</div><span class="app-name">相册</span></div>
+                <div class="app-item" data-app="settings"><div class="app-icon" style="background:#8e8e93;color:#fff">⚙️</div><span class="app-name">设置</span></div>
+            </div>
+            <div class="dock">
+                <div class="dock-icon" data-app="wechat" style="background:#07c160;color:#fff">💬</div>
+                <div class="dock-icon" data-app="phone" style="background:#34c759;color:#fff">📞</div>
+                <div class="dock-icon" data-app="messages" style="background:#007aff;color:#fff">✉️</div>
+                <div class="dock-icon" data-app="tiktok" style="background:#000;color:#fff">🎵</div>
+            </div>
+        </div>
+
+        <!-- ========== 微信 ========== -->
+        <div id="wechat-app" class="app-layer">
+            <div class="app-header"><button class="back-btn">←</button><span class="header-title" id="wxTitle">微信</span></div>
+            <!-- 聊天列表 -->
+            <div class="app-body" id="wxChatList" style="background:#fff;">
+                <div class="chat-list-item" data-chat="gege">
+                    <div class="chat-avatar">💗</div>
+                    <div style="flex:1"><div class="chat-name" style="color:#ff4d6a;">A.哥哥💗</div><div class="chat-preview">晚安宝宝🌙</div></div>
+                    <div style="font-size:11px;color:#bbb;">23:42</div>
+                </div>
+            </div>
+            <!-- 聊天详情 -->
+            <div id="wxChatDetail" style="display:none;flex-direction:column;height:100%;">
+                <div class="app-header"><button class="back-btn" id="wxBackBtn">←</button><span class="header-title">A.哥哥💗</span></div>
+                <div class="chat-messages" id="wxMessages">
+                    <div class="msg-bubble other">宝宝醒了吗🥺</div>
+                    <div class="msg-bubble self">刚醒！梦到你了哥哥</div>
+                    <div class="msg-bubble other">梦到我什么了呀</div>
+                    <div class="msg-bubble self">梦到你带我吃好吃的~</div>
+                    <div class="msg-bubble other">乖宝 周末带你去</div>
+                </div>
+                <div class="chat-input-bar">
+                    <input type="text" id="wxInput" placeholder="说点什么..." maxlength="80">
+                    <button class="send-btn" id="wxSendBtn">↑</button>
+                </div>
+            </div>
+            <!-- 通讯录 -->
+            <div class="app-body" id="wxContacts" style="display:none;background:#fff;">
+                <div style="padding:4px 14px;font-size:12px;color:#999;background:#f5f5f7;">★ 星标朋友</div>
+                <div class="contact-item">
+                    <div class="chat-avatar">💗</div>
+                    <div style="flex:1"><div class="chat-name" style="color:#ff4d6a;">A.哥哥💗</div></div>
+                    <span>❤️</span>
+                </div>
+                <div style="text-align:center;padding:30px;color:#bbb;">共 1 位联系人</div>
+            </div>
+            <!-- 朋友圈 -->
+            <div class="app-body" id="wxMoments" style="display:none;background:#f5f5f7;" id="momentsContainer">
+                <!-- 动态通过js生成 -->
+            </div>
+            <!-- 我 -->
+            <div class="app-body" id="wxMe" style="display:none;background:#f5f5f7;">
+                <div style="background:#fff;padding:20px;display:flex;gap:14px;border-bottom:8px solid #f5f5f7;">
+                    <div class="chat-avatar" style="width:60px;height:60px;">😊</div>
+                    <div><div style="font-size:18px;font-weight:600;">小雅宝宝</div><div style="font-size:13px;color:#999;">微信号：xiaoya_love</div></div>
+                </div>
+                <div class="wechat-tab" style="padding:14px;border-bottom:1px solid #eee;background:#fff;">📷 朋友圈</div>
+            </div>
+            <!-- 底部tab -->
+            <div class="wechat-tabs" id="wxTabs">
+                <div class="wechat-tab active" data-tab="chatlist">💬<span>微信</span></div>
+                <div class="wechat-tab" data-tab="contacts">👥<span>通讯录</span></div>
+                <div class="wechat-tab" data-tab="moments">🔵<span>朋友圈</span></div>
+                <div class="wechat-tab" data-tab="me">👤<span>我</span></div>
+            </div>
+        </div>
+
+        <!-- ========== 电话 ========== -->
+        <div id="phone-app" class="app-layer">
+            <div class="app-header"><button class="back-btn">←</button><span class="header-title">📞 电话</span></div>
+            <div class="app-body" style="background:#fff;">
+                <div style="padding:20px;text-align:center;font-size:18px;">⭐ 个人收藏</div>
+                <div class="contact-item">
+                    <div class="chat-avatar" style="border-radius:50%;">💗</div>
+                    <div style="flex:1"><div class="chat-name" style="color:#ff4d6a;">A.哥哥💗</div><div style="font-size:12px;color:#999;">138****8888</div></div>
+                    <button style="background:#34c759;color:#fff;border:none;border-radius:16px;padding:8px 14px;">📞</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 信息 ========== -->
+        <div id="messages-app" class="app-layer">
+            <div class="app-header"><button class="back-btn">←</button><span class="header-title">✉️ 信息</span></div>
+            <div class="app-body" style="background:#fff;" id="smsList">
+                <div class="chat-list-item" data-sms="gege">
+                    <div class="chat-avatar" style="border-radius:50%;">💗</div>
+                    <div style="flex:1"><div class="chat-name" style="color:#ff4d6a;">A.哥哥💗</div><div class="chat-preview">到家了跟我说一声哦</div></div>
+                </div>
+            </div>
+            <div id="smsDetail" style="display:none;flex-direction:column;height:100%;">
+                <div class="app-header"><button class="back-btn" id="smsBack">←</button><span class="header-title">A.哥哥💗</span></div>
+                <div class="chat-messages" id="smsMessages">
+                    <div class="msg-bubble other">小宝 我下班啦</div>
+                    <div class="msg-bubble self">辛苦啦哥哥！</div>
+                </div>
+                <div class="chat-input-bar">
+                    <input type="text" id="smsInput" placeholder="短信...">
+                    <button class="send-btn" style="background:#007aff;" id="smsSendBtn">↑</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 抖音 ========== -->
+        <div id="tiktok-app" class="app-layer" style="background:#000;">
+            <div class="app-header" style="position:absolute;top:0;left:0;right:0;background:transparent;border:none;color:#fff;">
+                <button class="back-btn" style="color:#fff;background:rgba(255,255,255,0.2);">←</button>
+                <span class="header-title" style="color:#fff;">🎵 抖音</span>
+            </div>
+            <div class="app-body" style="height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;">
+                <div class="tt-card"><div class="tt-heart">❤️</div><div style="position:relative;z-index:2;color:#fff;"><div class="tt-user-row">💗 A.哥哥💗</div><div>这是我们认识的第365天📅</div></div></div>
+                <div class="tt-card" style="background:linear-gradient(180deg,#1a2a1a,#000);"><div class="tt-heart">❤️</div><div style="position:relative;z-index:2;color:#fff;">偷拍宝宝睡觉的样子😴</div></div>
+            </div>
+        </div>
+
+        <!-- ========== 便签 ========== -->
+        <div id="notes-app" class="app-layer">
+            <div class="app-header"><button class="back-btn">←</button><span class="header-title">📝 便签</span></div>
+            <div class="app-body" style="background:#fef9e7;padding:10px;">
+                <div style="background:#fff;padding:12px;border-left:4px solid #ffcc00;margin-bottom:10px;" onclick="alert('📅 哥哥的生日倒计时：还有XX天！要准备惊喜🎂')">📅 哥哥的生日倒计时</div>
+                <div style="background:#fff;padding:12px;border-left:4px solid #ffcc00;margin-bottom:10px;" onclick="alert('🍰 哥哥爱吃：火锅、日料、小龙虾…')">🍰 哥哥喜欢的食物</div>
+                <div style="background:#fff;padding:12px;border-left:4px solid #ffcc00;" onclick="alert('💑 想和哥哥去海边、猫咖、山顶看星星')">💑 下次约会计划</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    // 元素
+    const lockScreen = document.getElementById('lockScreen');
+    const passScreen = document.getElementById('passScreen');
+    const desktop = document.getElementById('desktop');
+    const pwDots = Array.from(document.querySelectorAll('#pwDots .pw-dot'));
+    const pwKeypad = document.getElementById('pwKeypad');
+    const wxApp = document.getElementById('wechat-app');
+    const wxChatList = document.getElementById('wxChatList');
+    const wxChatDetail = document.getElementById('wxChatDetail');
+    const wxMessages = document.getElementById('wxMessages');
+    const wxInput = document.getElementById('wxInput');
+    const wxContacts = document.getElementById('wxContacts');
+    const wxMoments = document.getElementById('wxMoments');
+    const wxMe = document.getElementById('wxMe');
+    const wxTitle = document.getElementById('wxTitle');
+    const wxTabs = document.getElementById('wxTabs');
+    const phoneApp = document.getElementById('phone-app');
+    const msgApp = document.getElementById('messages-app');
+    const smsList = document.getElementById('smsList');
+    const smsDetail = document.getElementById('smsDetail');
+    const smsMessages = document.getElementById('smsMessages');
+    const smsInput = document.getElementById('smsInput');
+    const tiktokApp = document.getElementById('tiktok-app');
+    const notesApp = document.getElementById('notes-app');
+
+    let password = '';
+    const PASSWORD = '0423';
+    let messageCount = 0; // 用于触发朋友圈更新
+
+    // 更新时间
+    function updateTime(){
+        const now = new Date();
+        document.getElementById('lockTime').textContent = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+        const days = ['日','一','二','三','四','五','六'];
+        document.getElementById('lockDate').textContent = (now.getMonth()+1)+'月'+now.getDate()+'日 星期'+days[now.getDay()];
+    }
+    updateTime();
+    setInterval(updateTime, 30000);
+
+    // 解锁
+    function goToPassword(){
+        lockScreen.style.transform = 'translateY(-100%)';
+        setTimeout(() => {
+            lockScreen.style.display = 'none';
+            passScreen.style.display = 'flex';
+        }, 400);
+    }
+    lockScreen.addEventListener('click', goToPassword);
+    let startY = 0;
+    lockScreen.addEventListener('touchstart', e => startY = e.touches[0].clientY);
+    lockScreen.addEventListener('touchend', e => {
+        if(startY - e.changedTouches[0].clientY > 50) goToPassword();
+    });
+
+    // 密码输入
+    pwKeypad.addEventListener('click', e => {
+        const key = e.target.closest('.pw-key');
+        if(!key) return;
+        const val = key.dataset.key;
+        if(val === 'delete') password = password.slice(0,-1);
+        else if(password.length < 4) password += val;
+        pwDots.forEach((d,i) => d.classList.toggle('filled', i < password.length));
+        if(password.length === 4){
+            if(password === PASSWORD){
+                setTimeout(() => {
+                    passScreen.style.display = 'none';
+                    desktop.style.display = 'flex';
+                    password = '';
+                    pwDots.forEach(d => d.classList.remove('filled'));
+                }, 200);
+            } else {
+                pwDots.forEach(d => d.classList.add('error'));
+                setTimeout(() => {
+                    pwDots.forEach(d => d.classList.remove('error'));
+                    password = '';
+                    pwDots.forEach(d => d.classList.remove('filled'));
+                }, 500);
+            }
+        }
+    });
+
+    // 打开应用
+    function openApp(name){
+        hideAllApps();
+        desktop.style.display = 'none';
+        const app = document.getElementById(name+'-app');
+        if(app) app.style.display = 'flex';
+        if(name === 'wechat') switchWxTab('chatlist');
+    }
+    function hideAllApps(){
+        [wxApp, phoneApp, msgApp, tiktokApp, notesApp].forEach(a => a.style.display = 'none');
+    }
+    document.querySelectorAll('.app-item, .dock-icon').forEach(el => {
+        el.addEventListener('click', () => {
+            const app = el.dataset.app;
+            if(['camera','photos','settings'].includes(app)){
+                showToast(app==='camera'?'📷 相机需要授权~':app==='photos'?'🖼️ 相册里全是合照~':'⚙️ 设置已锁定');
+                return;
+            }
+            openApp(app);
+        });
+    });
+
+    // 返回桌面
+    document.querySelectorAll('.back-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // 如果是微信内部返回
+            if(e.target.id === 'wxBackBtn'){
+                wxChatDetail.style.display = 'none';
+                wxChatList.style.display = '';
+                wxTabs.style.display = 'flex';
+                wxTitle.textContent = '微信';
+                switchWxTab('chatlist');
+                return;
+            }
+            if(e.target.id === 'smsBack'){
+                smsDetail.style.display = 'none';
+                smsList.style.display = '';
+                return;
+            }
+            hideAllApps();
+            desktop.style.display = 'flex';
+        });
+    });
+
+    // 微信tab切换
+    function switchWxTab(tab){
+        [wxChatList, wxContacts, wxMoments, wxMe].forEach(p => p.style.display = 'none');
+        wxChatDetail.style.display = 'none';
+        wxTabs.style.display = 'flex';
+        document.querySelectorAll('.wechat-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.wechat-tab[data-tab="${tab}"]`).classList.add('active');
+        switch(tab){
+            case 'chatlist': wxChatList.style.display = ''; wxTitle.textContent = '微信'; break;
+            case 'contacts': wxContacts.style.display = ''; wxTitle.textContent = '通讯录'; break;
+            case 'moments': wxMoments.style.display = ''; wxTitle.textContent = '朋友圈'; renderMoments(); break;
+            case 'me': wxMe.style.display = ''; wxTitle.textContent = '我'; break;
+        }
+    }
+    wxTabs.addEventListener('click', e => {
+        const tab = e.target.closest('.wechat-tab');
+        if(tab) switchWxTab(tab.dataset.tab);
+    });
+    // 微信列表点击进入聊天
+    wxChatList.addEventListener('click', e => {
+        if(e.target.closest('[data-chat]')){
+            wxChatList.style.display = 'none';
+            wxContacts.style.display = 'none';
+            wxMoments.style.display = 'none';
+            wxMe.style.display = 'none';
+            wxChatDetail.style.display = 'flex';
+            wxTabs.style.display = 'none';
+            wxTitle.textContent = 'A.哥哥💗';
+        }
+    });
+
+    // 微信发送消息
+    function sendWxMessage(){
+        const text = wxInput.value.trim();
+        if(!text) return;
+        appendMessage('self', text, wxMessages);
+        wxInput.value = '';
+        messageCount++;
+        // 自动回复
+        setTimeout(() => {
+            const replies = [
+                '宝宝我好想你呀',
+                '乖宝今天开心吗',
+                '小雅宝宝在干嘛呢',
+                '老婆亲亲😘',
+                '哥哥也想你了',
+                '我家小宝最可爱了',
+                '等你回来哦',
+                '今天有没有想哥哥'
+            ];
+            const reply = replies[Math.floor(Math.random() * replies.length)];
+            appendMessage('other', reply, wxMessages);
+            messageCount++;
+            // 每3次消息可能更新朋友圈
+            if(messageCount % 3 === 0) addNewMoment();
+        }, 600);
+    }
+    document.getElementById('wxSendBtn').addEventListener('click', sendWxMessage);
+    wxInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendWxMessage(); });
+
+    // 短信发送
+    function sendSms(){
+        const text = smsInput.value.trim();
+        if(!text) return;
+        appendMessage('self', text, smsMessages);
+        smsInput.value = '';
+        setTimeout(() => {
+            const replies = ['收到啦宝宝','哥哥马上到','乖宝等我','好哒老婆'];
+            appendMessage('other', replies[Math.floor(Math.random()*replies.length)], smsMessages);
+        }, 500);
+    }
+    document.getElementById('smsSendBtn').addEventListener('click', sendSms);
+    smsInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendSms(); });
+    // 短信列表进入详情
+    smsList.addEventListener('click', e => {
+        if(e.target.closest('[data-sms]')){
+            smsList.style.display = 'none';
+            smsDetail.style.display = 'flex';
+        }
+    });
+
+    // 朋友圈
+    const momentsData = [
+        { name:'A.哥哥💗', content:'今天带宝宝去吃火锅了，看她开心的样子我也好幸福🥰', time:'1小时前', likes:'❤️ 宝宝赞了' },
+        { name:'A.哥哥💗', content:'深夜翻相册，满眼都是我家小雅宝宝的笑容', time:'3小时前', likes:'❤️ 宝宝赞了' },
+    ];
+    function renderMoments(){
+        wxMoments.innerHTML = momentsData.map(m => `
+            <div class="moment-item">
+                <div class="moment-header"><div class="moment-avatar">💗</div><span class="moment-name">${m.name}</span></div>
+                <div class="moment-content">${m.content}</div>
+                <div class="moment-time">${m.time}</div>
+                <div class="moment-likes">${m.likes}</div>
+            </div>
+        `).join('');
+    }
+    function addNewMoment(){
+        const newMoments = [
+            '刚和宝宝视频完，她今天真可爱😚',
+            '宝宝给我发了张自拍，已设为壁纸💗',
+            '想念小宝的碎碎念，平凡又温暖',
+            '老婆做的饭天下第一好吃！',
+            '和小雅宝宝连麦睡觉，听着呼吸声好安心'
+        ];
+        momentsData.unshift({
+            name:'A.哥哥💗',
+            content: newMoments[Math.floor(Math.random()*newMoments.length)],
+            time:'刚刚',
+            likes:'❤️ 宝宝赞了'
+        });
+        if(momentsData.length > 5) momentsData.pop();
+        if(wxMoments.style.display !== 'none') renderMoments();
+    }
+
+    function appendMessage(type, text, container){
+        const div = document.createElement('div');
+        div.className = `msg-bubble ${type}`;
+        div.textContent = text;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // Toast
+    function showToast(msg){
+        const old = document.querySelector('.toast');
+        if(old) old.remove();
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.textContent = msg;
+        document.getElementById('phoneScreen').appendChild(t);
+        setTimeout(() => t.remove(), 2000);
+    }
+
+    // ESC锁屏
+    document.addEventListener('keydown', e => {
+        if(e.key === 'Escape'){
+            if(desktop.style.display === 'flex'){
+                desktop.style.display = 'none';
+                hideAllApps();
+                passScreen.style.display = 'none';
+                lockScreen.style.display = 'flex';
+                lockScreen.style.transform = 'translateY(0)';
+            }
+        }
+    });
+
+    // 抖音爱心
+    document.querySelectorAll('.tt-heart').forEach(heart => {
+        heart.addEventListener('click', function(){
+            this.textContent = '❤️‍🔥';
+            this.style.transform = 'scale(1.5)';
+            setTimeout(() => {
+                this.textContent = '❤️';
+                this.style.transform = 'scale(1)';
+            }, 600);
+            showToast('💖 哥哥也爱你～');
+        });
+    });
+})();
+</script>
+</body>
+</html>
