@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>专属手机</title>
+<style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+        display:flex;justify-content:center;align-items:center;
+        min-height:100vh;background:#0a0a1a;
+        font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+        user-select:none;-webkit-user-select:none;
+    }
+    .phone{
+        width:375px;height:720px;background:#1c1c1e;border-radius:36px;padding:10px;
+        box-shadow:0 0 0 3px #2a2a2d,0 0 0 8px #333,0 20px 60px rgba(0,0,0,0.5);
+        position:relative;
+    }
+    .screen{
+        width:100%;height:100%;background:#000;border-radius:26px;overflow:hidden;position:relative;
+    }
+    /* 锁屏 */
+    #lockScreen{
+        position:absolute;top:0;left:0;width:100%;height:100%;
+        background:linear-gradient(180deg,#0a0a1a,#1a1040,#0d1b2a,#1b2838);
+        z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        border-radius:26px;cursor:pointer;transition:transform 0.4s ease;
+    }
+    .lock-time{font-size:64px;font-weight:200;color:#fff;letter-spacing:4px;text-shadow:0 0 40px rgba(255,255,255,0.3)}
+    .lock-date{font-size:16px;color:rgba(255,255,255,0.8);margin-top:6px}
+    .lock-hint{position:absolute;bottom:80px;display:flex;flex-direction:column;align-items:center;gap:8px;animation:bounce 2s infinite}
+    .lock-hint .arrow{font-size:28px;color:rgba(255,255,255,0.7)}
+    .lock-hint span{font-size:13px;color:rgba(255,255,255,0.6)}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+    /* 密码 */
+    #passScreen{
+        position:absolute;top:0;left:0;width:100%;height:100%;
+        background:#1c1c1e;z-index:190;display:none;flex-direction:column;align-items:center;
+        border-radius:26px;padding-top:60px;
+    }
+    .pw-title{color:#fff;font-size:20px;letter-spacing:3px;margin-bottom:8px}
+    .pw-subtitle{color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:30px}
+    .pw-dots{display:flex;gap:16px;margin-bottom:40px}
+    .pw-dot{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,0.5);transition:all 0.2s}
+    .pw-dot.filled{background:#fff;border-color:#fff;box-shadow:0 0 12px rgba(255,255,255,0.5)}
+    .pw-dot.error{border-color:#ff4d6a;animation:shake 0.5s}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-5px)}}
+    .pw-keypad{display:grid;grid-template-columns:repeat(3,70px);gap:8px}
+    .pw-key{background:rgba(255,255,255,0.08);border:none;border-radius:50%;color:#fff;font-size:22px;height:52px;cursor:pointer;transition:all 0.15s}
+    .pw-key:active{background:rgba(255,255,255,0.25);transform:scale(0.92)}
+    /* 桌面 */
+    #desktop{
+        position:absolute;top:0;left:0;width:100%;height:100%;
+        background:linear-gradient(135deg,#f2f2f7,#e8ecf1);
+        z-index:150;display:none;flex-direction:column;border-radius:26px;
+    }
+    .app-grid{padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px;flex:1}
+    .app-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+    .app-item:active{transform:scale(0.88)}
+    .app-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 12px rgba(0,0,0,0.12)}
+    .app-name{font-size:11px;color:#333}
+    .dock{background:rgba(255,255,255,0.7);margin:0 12px 16px;border-radius:24px;padding:10px;display:flex;justify-content:space-around}
+    .dock-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
+    .app-layer{position:absolute;top:0;left:0;width:100%;height:100%;background:#f5f5f7;z-index:160;display:none;flex-direction:column;border-radius:26px;overflow:hidden}
+    .app-header{height:44px;background:#f8f8f8;display:flex;align-items:center;padding:0 14px;border-bottom:1px solid #e5e5e5}
+    .back-btn{width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,0.05);border:none;font-size:16px;cursor:pointer}
+    .header-title{font-size:17px;font-weight:600;flex:1;text-align:center}
+    .app-body{flex:1;overflow-y:auto}
+    .toast{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#fff;padding:10px 22px;border-radius:20px;font-size:14px;z-index:300;pointer-events:none;animation:fadeInOut 2s forwards}
+    @keyframes fadeInOut{0%{opacity:0;transform:translate(-50%,-50%) scale(0.8)}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+</style>
+</head>
+<body>
+<div class="phone">
+    <div class="screen" id="screen">
+        <!-- 锁屏 -->
+        <div id="lockScreen">
+            <div class="lock-time" id="lockTime">12:38</div>
+            <div class="lock-date" id="lockDate">2月14日 星期五</div>
+            <div class="lock-hint"><span class="arrow">⇧</span><span>上滑解锁</span></div>
+        </div>
+        <!-- 密码 -->
+        <div id="passScreen">
+            <div class="pw-title">输入密码</div>
+            <div class="pw-subtitle">专属手机·请输入解锁密码</div>
+            <div class="pw-dots" id="pwDots"><div class="pw-dot"></div><div class="pw-dot"></div><div class="pw-dot"></div><div class="pw-dot"></div></div>
+            <div class="pw-keypad" id="pwKeypad">
+                <button class="pw-key" data-key="1">1</button><button class="pw-key" data-key="2">2</button><button class="pw-key" data-key="3">3</button>
+                <button class="pw-key" data-key="4">4</button><button class="pw-key" data-key="5">5</button><button class="pw-key" data-key="6">6</button>
+                <button class="pw-key" data-key="7">7</button><button class="pw-key" data-key="8">8</button><button class="pw-key" data-key="9">9</button>
+                <button class="pw-key" style="background:transparent;pointer-events:none"></button>
+                <button class="pw-key" data-key="0">0</button>
+                <button class="pw-key" data-key="delete" style="font-size:14px">⌫</button>
+            </div>
+        </div>
+        <!-- 桌面 -->
+        <div id="desktop">
+            <div class="app-grid">
+                <div class="app-item" data-app="wechat"><div class="app-icon" style="background:#07c160;color:#fff">💬</div><span class="app-name">微信</span></div>
+                <div class="app-item" data-app="phone"><div class="app-icon" style="background:#34c759;color:#fff">📞</div><span class="app-name">电话</span></div>
+                <div class="app-item" data-app="messages"><div class="app-icon" style="background:#007aff;color:#fff">✉️</div><span class="app-name">信息</span></div>
+                <div class="app-item" data-app="tiktok"><div class="app-icon" style="background:#000;color:#fff">🎵</div><span class="app-name">抖音</span></div>
+                <div class="app-item" data-app="notes"><div class="app-icon" style="background:#ffcc00;color:#fff">📝</div><span class="app-name">便签</span></div>
+            </div>
+            <div class="dock">
+                <div class="dock-icon" data-app="wechat" style="background:#07c160;color:#fff">💬</div>
+                <div class="dock-icon" data-app="phone" style="background:#34c759;color:#fff">📞</div>
+                <div class="dock-icon" data-app="messages" style="background:#007aff;color:#fff">✉️</div>
+                <div class="dock-icon" data-app="tiktok" style="background:#000;color:#fff">🎵</div>
+            </div>
+        </div>
+        <!-- 应用层（简化版） -->
+        <div id="wechat-app" class="app-layer"><div class="app-header"><button class="back-btn">←</button><span class="header-title">微信</span></div><div class="app-body" style="background:#fff;padding:20px;text-align:center">💕 猪猪宝贝<br>只有你一个人的微信</div></div>
+        <div id="phone-app" class="app-layer"><div class="app-header"><button class="back-btn">←</button><span class="header-title">电话</span></div><div class="app-body" style="background:#fff;padding:20px;text-align:center">📞 联系人：猪猪宝贝<br>138****8888</div></div>
+        <div id="messages-app" class="app-layer"><div class="app-header"><button class="back-btn">←</button><span class="header-title">信息</span></div><div class="app-body" style="background:#fff;padding:20px;text-align:center">✉️ 与猪猪宝贝的短信<br>“想你啦~”</div></div>
+        <div id="tiktok-app" class="app-layer" style="background:#000"><div class="app-header" style="background:transparent;color:#fff"><button class="back-btn" style="color:#fff">←</button><span class="header-title" style="color:#fff">抖音</span></div><div class="app-body" style="background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px">🎵 全是你们的日常💕</div></div>
+        <div id="notes-app" class="app-layer"><div class="app-header"><button class="back-btn">←</button><span class="header-title">便签</span></div><div class="app-body" style="background:#fef9e7;padding:20px">
+            <div style="background:#fff;padding:12px;border-left:4px solid #ffcc00;margin-bottom:10px">📅 宝贝的生日倒计时</div>
+            <div style="background:#fff;padding:12px;border-left:4px solid #ffcc00">💕 关于她的一切</div>
+        </div></div>
+    </div>
+</div>
+<script>
+(function(){
+const lockScreen = document.getElementById('lockScreen');
+const passScreen = document.getElementById('passScreen');
+const desktop = document.getElementById('desktop');
+const pwDots = passScreen.querySelectorAll('.pw-dot');
+let passwordInput = '';
+const PASSWORD = '0423';
+
+// 更新时间
+function updateTime(){
+    const now = new Date();
+    document.getElementById('lockTime').textContent = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    const days = ['日','一','二','三','四','五','六'];
+    document.getElementById('lockDate').textContent = (now.getMonth()+1)+'月'+now.getDate()+'日 星期'+days[now.getDay()];
+}
+updateTime();
+setInterval(updateTime, 30000);
+
+// 解锁：点击或上滑
+function goToPassword(){
+    lockScreen.style.transform = 'translateY(-100%)';
+    setTimeout(() => {
+        lockScreen.style.display = 'none';
+        passScreen.style.display = 'flex';
+    }, 400);
+}
+lockScreen.addEventListener('click', goToPassword);
+
+let startY = 0;
+lockScreen.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
+lockScreen.addEventListener('touchend', e => {
+    if(startY - e.changedTouches[0].clientY > 50) goToPassword();
+});
+
+// 密码输入
+document.getElementById('pwKeypad').addEventListener('click', e => {
+    const key = e.target.closest('.pw-key');
+    if(!key) return;
+    const val = key.dataset.key;
+    if(val === 'delete'){
+        passwordInput = passwordInput.slice(0,-1);
+    }else if(passwordInput.length < 4){
+        passwordInput += val;
+    }
+    pwDots.forEach((d,i) => d.classList.toggle('filled', i < passwordInput.length));
+    if(passwordInput.length === 4){
+        if(passwordInput === PASSWORD){
+            setTimeout(() => {
+                passScreen.style.display = 'none';
+                desktop.style.display = 'flex';
+                passwordInput = '';
+                pwDots.forEach(d => d.classList.remove('filled'));
+            }, 200);
+        }else{
+            pwDots.forEach(d => d.classList.add('error'));
+            setTimeout(() => {
+                pwDots.forEach(d => d.classList.remove('error'));
+                passwordInput = '';
+                pwDots.forEach(d => d.classList.remove('filled'));
+            }, 500);
+        }
+    }
+});
+
+// 打开应用
+function openApp(name){
+    document.querySelectorAll('.app-layer').forEach(l => l.style.display = 'none');
+    desktop.style.display = 'none';
+    const app = document.getElementById(name+'-app');
+    if(app) app.style.display = 'flex';
+}
+document.querySelectorAll('.app-item,.dock-icon').forEach(el => {
+    el.addEventListener('click', () => {
+        const app = el.dataset.app;
+        if(app && app !== 'camera' && app !== 'photos' && app !== 'settings') openApp(app);
+        else if(app === 'camera') showToast('📷 相机需要授权~');
+        else if(app === 'photos') showToast('🖼️ 相册里全是合照~');
+        else if(app === 'settings') showToast('⚙️ 设置已锁定');
+    });
+});
+
+// 返回桌面
+document.querySelectorAll('.back-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.app-layer').forEach(l => l.style.display = 'none');
+        desktop.style.display = 'flex';
+    });
+});
+
+function showToast(msg){
+    const old = document.querySelector('.toast');
+    if(old) old.remove();
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.getElementById('screen').appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+}
+
+// ESC 锁屏
+document.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){
+        if(desktop.style.display === 'flex'){
+            desktop.style.display = 'none';
+            document.querySelectorAll('.app-layer').forEach(l => l.style.display = 'none');
+            passScreen.style.display = 'none';
+            lockScreen.style.display = 'flex';
+            lockScreen.style.transform = 'translateY(0)';
+        }
+    }
+});
+})();
+</script>
+</body>
+</html>
